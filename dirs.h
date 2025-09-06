@@ -1,13 +1,19 @@
 /*
-    This library is not a production ready and has it own problems
-    most of wich is known by author, so use it on your own risk
+    This is a single header, Windows-specific 
+    library created to ease the work with directories in c.
 
-    This is a single header WINDOWS related library created to 
-    ease the work with directories in c.
+    This library is not a production ready and has it own problems,
+    most of wich are known by author, so use it on your own risk
 
-    To use this library you should define DIRS_IMPLEMENTATION 
-    Inspiration for this kind of implementation is taken from 
-    stb libs: https://github.com/nothings/stb
+    Usage:
+        Add dirs.h to your project
+        In one source file define DIRS_IMPLEMENTATION before including it
+
+        You can also define DIRS_STRIP_PREFIXES so you dont
+        need to write dirs_ prefix before each function
+
+    This library folows the single-header style popularized by 
+    stb: github.com/nothings/stb.
 
     Usage of this library you can see in dirs.c
 */
