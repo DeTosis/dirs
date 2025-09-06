@@ -19,11 +19,11 @@ int main(void)
         Return value of this function is a struct, containing char** for contents
         and a contents_count - ammount of elements 
     */
-    dirs_contents c = get_contents(".", DIRS_DIRECTORY);
-    for (int i = 0; i < c.contents_count; i++)
-    {
-        printf("%s\n", c.values[i]);
-    }
+    // dirs_contents c = get_contents(".", DIRS_DIRECTORY);
+    // for (int i = 0; i < c.contents_count; i++)
+    // {
+    //     printf("%s\n", c.values[i]);
+    // }
 
     /*
         To get the ammount of items in the directory you can use 
@@ -34,7 +34,26 @@ int main(void)
 
         content_type is described earlier.
     */
-    printf("%s", get_contents_count(".", DIRS_ALL));
+    //printf("%d", get_contents_count(".", DIRS_ALL));
+
+    /*
+        int dirs_get_contents_count_by_ext(const char* path, const char* ext) or 
+        int get_contents_count_by_ext(const char* path, const char* ext) returns
+        the number of items in a directory based by extencion provided
+    */
+    //printf("%d", get_contents_count_by_ext(".", ".c"));
+
+    /*
+        dirs_contents dirs_get_contents_by_ext(const char* path, const char* ext) or 
+        dirs_contents get_contents_by_ext(const char* path, const char* ext) returns 
+        dirs_contents struct of files filtered by extencion and  
+        contents_count - ammount of elements  
+    */
+    // dirs_contents c = get_contents_by_ext(".", ".c");
+    // for (int i = 0; i < c.contents_count; i++)
+    // {
+    //     printf("%s\n", c.values[i]);
+    // }
 
     return (0);
 }

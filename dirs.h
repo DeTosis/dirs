@@ -33,6 +33,8 @@ printf("Platform not supported, this library targets only Windows");
 #ifdef DIRS_STRIP_PREFIXES
 #define get_contents_count dirs_get_contents_count
 #define get_contents dirs_get_contents
+#define dirs_get_contents_by_ext get_contents_by_ext
+#define dirs_get_contents_count_by_ext get_contents_count_by_ext
 #endif // DIRS_STRIP_PREFIXES
 
 typedef enum
@@ -50,7 +52,10 @@ typedef struct
 
 // *** DIRS_CORE ***
 int dirs_get_contents_count(const char* path, dirs_content_type type);
+int dirs_get_contents_count_by_ext(const char* path, const char* ext);
+
 dirs_contents dirs_get_contents(const char* path, dirs_content_type type);
+dirs_contents dirs_get_contents_by_ext(const char* path, const char* ext);
 
 // *** DIRS_EXTRAS ***
 int dirs_get_path_data(const char* path, WIN32_FIND_DATA* fdFile,
@@ -94,6 +99,37 @@ int dirs_get_contents_count(const char* path, dirs_content_type type)
     FindClose(hFind);
     return content_count;
 }
+int dirs_get_contents_count_by_ext(const char* path, const char* ext)
+{
+    WIN32_FIND_DATA fdFile;
+    HANDLE hFind;
+    dirs_get_path_data(path, &fdFile, &hFind);
+
+    int content_count = 0;
+    do
+    {
+        if (strcmp(fdFile.cFileName, ".") != 0 &&
+            strcmp(fdFile.cFileName, "..") != 0)
+        {
+            if (!(fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+            {
+                const char* s_ext = strrchr(fdFile.cFileName, '.');
+                if (s_ext == NULL)
+                    s_ext = "";
+
+                if (strcmp(s_ext, ext) == 0)
+                {
+                    content_count++;
+                }
+                continue;
+            }
+        }
+    } while (FindNextFile(hFind, &fdFile) != 0);
+
+    FindClose(hFind);
+    return content_count;
+}
+
 dirs_contents dirs_get_contents(const char* path, dirs_content_type type)
 {
     dirs_contents c = {0};
@@ -139,6 +175,50 @@ dirs_contents dirs_get_contents(const char* path, dirs_content_type type)
                      !(fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
             {
                 c.values[c_index++] = strdup(s_path);
+                continue;
+            }
+        }
+    } while (FindNextFile(hFind, &fdFile) != 0);
+    return c;
+}
+dirs_contents dirs_get_contents_by_ext(const char* path, const char* ext)
+{
+    dirs_contents c = {0};
+    c.contents_count = 0;
+
+    WIN32_FIND_DATA fdFile;
+    HANDLE hFind;
+    dirs_get_path_data(path, &fdFile, &hFind);
+
+    c.contents_count = dirs_get_contents_count_by_ext(path, ext);
+    c.values = malloc(c.contents_count * sizeof(char));
+    if (!c.values)
+    {
+        printf("'c.values' allocation error in function '%s'", __func__);
+        free(c.values);
+        c.contents_count = 0;
+        return c;
+    }
+
+    int c_index = 0;
+    char s_path[2048];
+
+    do
+    {
+        if (strcmp(fdFile.cFileName, ".") != 0 &&
+            strcmp(fdFile.cFileName, "..") != 0)
+        {
+            sprintf(s_path, "%s\\%s", path, fdFile.cFileName);
+            if (!(fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+            {
+                const char* s_ext = strrchr(fdFile.cFileName, '.');
+                if (s_ext == NULL)
+                    s_ext = "";
+
+                if (strcmp(s_ext, ext) == 0)
+                {
+                    c.values[c_index++] = strdup(s_path);
+                }
                 continue;
             }
         }
