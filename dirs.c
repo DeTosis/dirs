@@ -55,5 +55,25 @@ int main(void)
     //     printf("%s\n", c.values[i]);
     // }
 
+    /*
+        int dirs_create_directory(const char* path) and int dirs_create_file(const char* file_name)
+        should be self explanatory at this point, stripped versions: 
+        int create_directory(const char* path) and int create_file(const char* file_name). 
+    */
+    // create_directory(".\\build");
+    // create_file(".\\build\\test.txt");
+
+    /*
+        int dirs_remove_directory(const char* path) and int dirs_remove_file(const char* file_name)
+        removes directories and files.
+
+        be aware that dirs_remove_directory removes directory recursivly, removeing all subfolders and files
+        before. 
+
+        stripped: remove_directory(const char* path) remove_file(const char* file_name)
+    */
+    remove_directory(".\\build");
+    remove_file(".\\a");
+
     return (0);
 }

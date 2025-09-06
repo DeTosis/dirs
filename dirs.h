@@ -25,16 +25,25 @@
 #include <string.h>
 
 #ifdef _WIN32
+
 #include <windows.h>
 #else
 printf("Platform not supported, this library targets only Windows");
+
 #endif // _WIN32
 
 #ifdef DIRS_STRIP_PREFIXES
 #define get_contents_count dirs_get_contents_count
+#define get_contents_count_by_ext dirs_get_contents_count_by_ext
+
 #define get_contents dirs_get_contents
-#define dirs_get_contents_by_ext get_contents_by_ext
-#define dirs_get_contents_count_by_ext get_contents_count_by_ext
+#define get_contents_by_ext dirs_get_contents_by_ext
+
+#define create_directory dirs_create_directory
+#define create_file dirs_create_file
+
+#define remove_directory dirs_remove_directory
+#define remove_file dirs_remove_file
 #endif // DIRS_STRIP_PREFIXES
 
 typedef enum
@@ -50,6 +59,7 @@ typedef struct
     char** values;
 } dirs_contents;
 
+
 // *** DIRS_CORE ***
 int dirs_get_contents_count(const char* path, dirs_content_type type);
 int dirs_get_contents_count_by_ext(const char* path, const char* ext);
@@ -57,9 +67,15 @@ int dirs_get_contents_count_by_ext(const char* path, const char* ext);
 dirs_contents dirs_get_contents(const char* path, dirs_content_type type);
 dirs_contents dirs_get_contents_by_ext(const char* path, const char* ext);
 
+int dirs_create_directory(const char* path);
+int dirs_create_file(const char* file_name);
+
+int dirs_remove_directory(const char* path);
+int dirs_remove_file(const char* file_name);
+
 // *** DIRS_EXTRAS ***
-int dirs_get_path_data(const char* path, WIN32_FIND_DATA* fdFile,
-                       HANDLE* hFind);
+static int dirs_get_path_data(const char* path, WIN32_FIND_DATA* fdFile,
+                              HANDLE* hFind);
 
 // *** DIRS_IMPLEMENTATION ***
 #ifdef DIRS_IMPLEMENTATION
@@ -226,7 +242,82 @@ dirs_contents dirs_get_contents_by_ext(const char* path, const char* ext)
     return c;
 }
 
-int dirs_get_path_data(const char* path, WIN32_FIND_DATA* fdFile, HANDLE* hFind)
+int dirs_create_directory(const char* path)
+{
+    DWORD dwAttrib = GetFileAttributes(path);
+    if (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+        (dwAttrib & FILE_ATTRIBUTE_DIRECTORY))
+    {
+
+        int hresult = _mkdir(path);
+        return hresult;
+    }
+    return 1;
+}
+int dirs_create_file(const char* file_name)
+{
+    FILE* fp;
+    fp = fopen(file_name, "w");
+    if (fp)
+    {
+        fclose(fp);
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+int dirs_remove_directory(const char* path)
+{
+    int dir_exists = 0;
+
+    DWORD dwAttrib = GetFileAttributes(path);
+    if (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+        (dwAttrib & FILE_ATTRIBUTE_DIRECTORY))
+    {
+        dir_exists = 1;
+    }
+
+    if (dir_exists)
+    {
+
+        WIN32_FIND_DATA fdFile;
+        HANDLE hFind;
+        dirs_get_path_data(path, &fdFile, &hFind);
+
+        char s_path[2048];
+        do
+        {
+            if (strcmp(fdFile.cFileName, ".") != 0 &&
+                strcmp(fdFile.cFileName, "..") != 0)
+            {
+                sprintf(s_path, "%s\\%s", path, fdFile.cFileName);
+                if (fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                {
+                    dirs_remove_directory(s_path);
+                    RemoveDirectory(s_path);
+                }
+                else
+                {
+                    dirs_remove_file(s_path);
+                }
+            }
+        } while (FindNextFile(hFind, &fdFile) != 0);
+    }
+
+    RemoveDirectory(path);
+    return 0;
+}
+int dirs_remove_file(const char* file_name)
+{
+    int hresult = remove(file_name);
+    return hresult;
+}
+
+static int dirs_get_path_data(const char* path, WIN32_FIND_DATA* fdFile,
+                              HANDLE* hFind)
 {
     *hFind = NULL;
 
