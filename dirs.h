@@ -1,0 +1,189 @@
+/*
+    This library is not a production ready and has it own problems
+    most of wich is known by author, so use it on your own risk
+
+    This is a single header WINDOWS related library created to 
+    ease the work with directories in c.
+
+    To use this library you should define DIRS_IMPLEMENTATION 
+    Inspiration for this kind of implementation is taken from 
+    stb libs: https://github.com/nothings/stb
+
+    Usage of this library you can see in dirs.c
+*/
+#ifndef DIRS_H
+#define DIRS_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+printf("Platform not supported, this library targets only Windows");
+#endif // _WIN32
+
+#ifdef DIRS_STRIP_PREFIXES
+#define get_contents_count dirs_get_contents_count
+#define get_contents dirs_get_contents
+#endif // DIRS_STRIP_PREFIXES
+
+typedef enum
+{
+    DIRS_ALL,
+    DIRS_DIRECTORY,
+    DIRS_FILE
+} dirs_content_type;
+
+typedef struct
+{
+    int contents_count;
+    char** values;
+} dirs_contents;
+
+// *** DIRS_CORE ***
+int dirs_get_contents_count(const char* path, dirs_content_type type);
+dirs_contents dirs_get_contents(const char* path, dirs_content_type type);
+
+// *** DIRS_EXTRAS ***
+int dirs_get_path_data(const char* path, WIN32_FIND_DATA* fdFile,
+                       HANDLE* hFind);
+
+// *** DIRS_IMPLEMENTATION ***
+#ifdef DIRS_IMPLEMENTATION
+int dirs_get_contents_count(const char* path, dirs_content_type type)
+{
+    WIN32_FIND_DATA fdFile;
+    HANDLE hFind;
+    dirs_get_path_data(path, &fdFile, &hFind);
+
+    int content_count = 0;
+    do
+    {
+        if (strcmp(fdFile.cFileName, ".") != 0 &&
+            strcmp(fdFile.cFileName, "..") != 0)
+        {
+            if (type == DIRS_ALL)
+            {
+                content_count++;
+                continue;
+            }
+
+            if (type == DIRS_DIRECTORY &&
+                fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            {
+                content_count++;
+                continue;
+            }
+            else if (type == DIRS_FILE &&
+                     !(fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+            {
+                content_count++;
+                continue;
+            }
+        }
+    } while (FindNextFile(hFind, &fdFile) != 0);
+
+    FindClose(hFind);
+    return content_count;
+}
+dirs_contents dirs_get_contents(const char* path, dirs_content_type type)
+{
+    dirs_contents c = {0};
+    c.contents_count = 0;
+
+    WIN32_FIND_DATA fdFile;
+    HANDLE hFind;
+    dirs_get_path_data(path, &fdFile, &hFind);
+
+    c.contents_count = dirs_get_contents_count(path, type);
+    c.values = malloc(c.contents_count * sizeof(char));
+
+    if (!c.values)
+    {
+        printf("'c.values' allocation error in function '%s'", __func__);
+        free(c.values);
+        c.contents_count = 0;
+        return c;
+    }
+
+    int c_index = 0;
+    char s_path[2048];
+
+    do
+    {
+        if (strcmp(fdFile.cFileName, ".") != 0 &&
+            strcmp(fdFile.cFileName, "..") != 0)
+        {
+            sprintf(s_path, "%s\\%s", path, fdFile.cFileName);
+            if (type == DIRS_ALL)
+            {
+                c.values[c_index++] = strdup(s_path);
+                continue;
+            }
+
+            if (type == DIRS_DIRECTORY &&
+                fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            {
+                c.values[c_index++] = strdup(s_path);
+                continue;
+            }
+            else if (type == DIRS_FILE &&
+                     !(fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+            {
+                c.values[c_index++] = strdup(s_path);
+                continue;
+            }
+        }
+    } while (FindNextFile(hFind, &fdFile) != 0);
+    return c;
+}
+
+int dirs_get_path_data(const char* path, WIN32_FIND_DATA* fdFile, HANDLE* hFind)
+{
+    *hFind = NULL;
+
+    char s_path[2048];
+    sprintf(s_path, "%s\\*.*", path);
+
+    if ((*hFind = FindFirstFile(s_path, fdFile)) == INVALID_HANDLE_VALUE)
+    {
+        printf("Directory '%s' could not be reached or found", s_path);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+#endif //DIRS_IMPLEMENTATION
+
+#endif //DIRS_H
+
+/*
+    This project is guarded by MIT license
+========================================================================================
+
+    MIT License
+
+    Copyright (c) 2025 Nevostruev Alexander
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+========================================================================================
+*/
