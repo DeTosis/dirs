@@ -8,7 +8,7 @@ _This library is not a production ready and has it own problems, most of wich ar
 ## How to use
 
 1. Copy [`dirs.h`](https://github.com/DeTosis/dirs/blob/master/dirs.h) file into your project.
-2.  In **one** source file define `DIRS_IMPLEMENTATION` before includin it:
+2.  In **one** source file define `DIRS_IMPLEMENTATION` before including it:
 ```c
 #define DIRS_IMPLEMENTATION
 #include "dirs.h"
