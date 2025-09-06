@@ -44,7 +44,18 @@ printf("Platform not supported, this library targets only Windows");
 
 #define remove_directory dirs_remove_directory
 #define remove_file dirs_remove_file
+
+#define read_entire_file dirs_read_entire_file
+#define write_entire_file dirs_write_entire_file
+#define append_file_start dirs_append_file_start
+#define append_file_end dirs_append_file_end
 #endif // DIRS_STRIP_PREFIXES
+
+#define TODO                                                                   \
+    {                                                                          \
+        printf("[ TODO ] Function '%s' is not implemented", __func__);         \
+        exit(1);                                                               \
+    }
 
 typedef enum
 {
@@ -72,6 +83,11 @@ int dirs_create_file(const char* file_name);
 
 int dirs_remove_directory(const char* path);
 int dirs_remove_file(const char* file_name);
+
+char* dirs_read_entire_file(const char* path);
+int dirs_write_entire_file(const char* path, const char* buffer);
+int dirs_append_file_start(const char* path, const char* buffer);
+int dirs_append_file_end(const char* path, const char* buffer);
 
 // *** DIRS_EXTRAS ***
 static int dirs_get_path_data(const char* path, WIN32_FIND_DATA* fdFile,
@@ -130,8 +146,7 @@ int dirs_get_contents_count_by_ext(const char* path, const char* ext)
             if (!(fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
             {
                 const char* s_ext = strrchr(fdFile.cFileName, '.');
-                if (s_ext == NULL)
-                    s_ext = "";
+                if (s_ext == NULL) s_ext = "";
 
                 if (strcmp(s_ext, ext) == 0)
                 {
@@ -228,8 +243,7 @@ dirs_contents dirs_get_contents_by_ext(const char* path, const char* ext)
             if (!(fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
             {
                 const char* s_ext = strrchr(fdFile.cFileName, '.');
-                if (s_ext == NULL)
-                    s_ext = "";
+                if (s_ext == NULL) s_ext = "";
 
                 if (strcmp(s_ext, ext) == 0)
                 {
@@ -247,12 +261,10 @@ int dirs_create_directory(const char* path)
     DWORD dwAttrib = GetFileAttributes(path);
     if (dwAttrib != INVALID_FILE_ATTRIBUTES &&
         (dwAttrib & FILE_ATTRIBUTE_DIRECTORY))
-    {
+        return 1;
 
-        int hresult = _mkdir(path);
-        return hresult;
-    }
-    return 1;
+    int hresult = _mkdir(path);
+    return hresult;
 }
 int dirs_create_file(const char* file_name)
 {
@@ -316,6 +328,85 @@ int dirs_remove_file(const char* file_name)
     return hresult;
 }
 
+char* dirs_read_entire_file(const char* path)
+{
+    FILE* fp;
+    fp = fopen(path, "r");
+
+    if (fp != NULL)
+    {
+        if (fseek(fp, 0, SEEK_END) < 0) return NULL;
+
+        int sz = ftell(fp);
+        if (sz < 0) return NULL;
+        rewind(fp);
+
+        char* buffer = malloc(sz);
+        if (!buffer) return NULL;
+
+        fread(buffer, sz, 1, fp);
+        if (ferror(fp)) return NULL;
+
+        buffer[sz] = '\0';
+
+        fclose(fp);
+        return buffer;
+    }
+    else
+    {
+        return NULL;
+    }
+}
+int dirs_write_entire_file(const char* path, const char* buffer)
+{
+    FILE* fp;
+    fp = fopen(path, "wb");
+
+    if (fp != NULL)
+    {
+        fwrite(buffer, strlen(buffer), 1, fp);
+        if (ferror(fp)) return -1;
+
+        fclose(fp);
+        return 0;
+    }
+    return -1;
+}
+int dirs_append_file_start(const char* path, const char* buffer)
+{
+    char* contents = dirs_read_entire_file(path);
+    int cont_size = strlen(contents);
+    int buff_size = strlen(buffer);
+
+    char* new_buffer = malloc(cont_size + buff_size);
+    if (!new_buffer) return -1;
+
+    memcpy(new_buffer, buffer, buff_size);
+    memcpy(new_buffer + buff_size, contents, cont_size);
+
+    new_buffer[cont_size + buff_size] = '\0';
+    dirs_write_entire_file(path, new_buffer);
+    free(new_buffer);
+    return 0;
+}
+int dirs_append_file_end(const char* path, const char* buffer)
+{
+    char* contents = dirs_read_entire_file(path);
+    int cont_size = strlen(contents);
+    int buff_size = strlen(buffer);
+
+    char* new_buffer = malloc(cont_size + buff_size);
+    if (!new_buffer) return -1;
+
+    memcpy(new_buffer, contents, cont_size);
+    memcpy(new_buffer + cont_size, buffer, buff_size);
+
+    new_buffer[cont_size + buff_size] = '\0';
+    dirs_write_entire_file(path, new_buffer);
+    free(new_buffer);
+    return 0;
+}
+
 static int dirs_get_path_data(const char* path, WIN32_FIND_DATA* fdFile,
                               HANDLE* hFind)
 {
@@ -332,7 +423,6 @@ static int dirs_get_path_data(const char* path, WIN32_FIND_DATA* fdFile,
 
     return TRUE;
 }
-
 #endif //DIRS_IMPLEMENTATION
 
 #endif //DIRS_H
